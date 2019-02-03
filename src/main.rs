@@ -3,20 +3,24 @@ extern crate graphics;
 extern crate glutin_window;
 extern crate opengl_graphics;
 
-use piston::window::WindowSettings;
+use core::f64::consts::PI;
+use glutin_window::GlutinWindow as Window;
+use graphics::character::CharacterCache;
+use opengl_graphics::{OpenGL, Filter, GlGraphics, GlyphCache, TextureSettings};
 use piston::event_loop::*;
 use piston::input::*;
-use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{OpenGL, Filter, GlGraphics, GlyphCache, TextureSettings};
-//use graphics::character::CharacterCache;
+use piston::window::WindowSettings;
+use std::char;
 
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     ball_x: f64,
     ball_y: f64,
+    left_paddle: f64,
+    right_paddle: f64,
     ball_direction: f64,
-    score: [i32; 2]
+    score: [u32; 2]
 }
 
 impl App {
@@ -25,7 +29,9 @@ impl App {
             gl: gl,
             ball_x: 0.0,
             ball_y: 0.0,
-            ball_direction: 90.0,
+            left_paddle: 0.0, 
+            right_paddle: 0.0,
+            ball_direction: 30.0,
             score: [0, 0]
         }
     }
@@ -33,7 +39,7 @@ impl App {
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
 
-        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
         const WHITE:   [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         const GRAY:   [f32; 4] = [0.6, 0.6, 0.6, 1.0];
 
@@ -43,6 +49,8 @@ impl App {
                       args.height / 2.0);
         let ball= rectangle::square(self.ball_x, self.ball_y, BALL_SIZE);
 
+        let _left_score=char::from_digit(self.score[0], 10);
+        let _right_score=char::from_digit(self.score[1], 10);
         // Set me up the font
         let texture_settings = TextureSettings::new().filter(Filter::Nearest);
         let ref mut glyphs = GlyphCache::new("assets/Square.ttf", (), texture_settings)
@@ -60,12 +68,17 @@ impl App {
                 rectangle(GRAY, strip, c.transform, gl);
             }
             rectangle(WHITE, ball, c.transform, gl);
+            // Draw the score 
+            let text_image = Image::new_color(WHITE);
+
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
-        // Rotate 2 radians per second.
-//        self.rotation += 2.0 * args.dt;
+        // move ball
+        self.ball_x = self.ball_x + 10.0 * (self.ball_direction * PI / 180.0).cos();
+        self.ball_y = self.ball_y + 10.0 * (self.ball_direction* PI / 180.0).sin();
+
     }
 }
 
