@@ -8,7 +8,13 @@ edition = "2018"
 name = "pong-game"
 
 [dependencies]
+find_folder = "*"
 piston = "0.40.0"
-piston2d-graphics = "0.29.0"
-pistoncore-glutin_window = "0.52.0"
 piston2d-opengl_graphics = "0.58.0"
+pistoncore-glutin_window = "0.52.0"
+piston_window = "*"
+
+[dependencies.piston2d-graphics]
+version = "0.29.0"
+features = ["glyph_cache_rusttype"]
+

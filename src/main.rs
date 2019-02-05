@@ -1,20 +1,12 @@
-extern crate piston;
-extern crate graphics;
-extern crate glutin_window;
-extern crate opengl_graphics;
+extern crate piston_window;
+extern crate find_folder;
 
 use core::f64::consts::PI;
-use glutin_window::GlutinWindow as Window;
-use graphics::character::CharacterCache;
-use opengl_graphics::{OpenGL, Filter, GlGraphics, GlyphCache, TextureSettings};
-use piston::event_loop::*;
-use piston::input::*;
-use piston::window::WindowSettings;
-use std::char;
+use piston_window::*;
 
 
 pub struct App {
-    gl: GlGraphics, // OpenGL drawing backend.
+    window: PistonWindow, // OpenGL drawing backend.
     ball_x: f64,
     ball_y: f64,
     left_paddle: f64,
@@ -24,24 +16,24 @@ pub struct App {
 }
 
 impl App {
-    fn new(gl: GlGraphics) -> App {
+    fn new(window: PistonWindow) -> App {
         App {
-            gl: gl,
+            window: window,
             ball_x: 0.0,
             ball_y: 0.0,
-            left_paddle: 0.0, 
+            left_paddle: 0.0,
             right_paddle: 0.0,
             ball_direction: 30.0,
             score: [0, 0]
         }
     }
 
-    fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
+    fn render(&mut self, args: &RenderArgs, glyphs: &mut Glyphs, event: &piston_window::Event ) {
 
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
         const WHITE:   [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         const GRAY:   [f32; 4] = [0.6, 0.6, 0.6, 1.0];
+        const FONTSIZE : f64 = 20.0;
 
         const BALL_SIZE: f64 = 20.0;
 
@@ -49,29 +41,53 @@ impl App {
                       args.height / 2.0);
         let ball= rectangle::square(self.ball_x, self.ball_y, BALL_SIZE);
 
-        let _left_score=char::from_digit(self.score[0], 10);
-        let _right_score=char::from_digit(self.score[1], 10);
-        // Set me up the font
-        let texture_settings = TextureSettings::new().filter(Filter::Nearest);
-        let ref mut glyphs = GlyphCache::new("assets/Square.ttf", (), texture_settings)
-           .expect("Could not load font");
+        let mut _left_score=self.score[0].to_string();
+        let mut _right_score=self.score[1].to_string();
 
 
-        self.gl.draw(args.viewport(), |c, gl| {
+        self.window.draw_2d(event, |c, g| {
             // Clear the screen.
-            clear(BLACK, gl);
+            clear(BLACK, g);
+
 
             // Draw a box rotating around the middle of the screen.
             for i in 1 .. 20 {
                 let strip_y=(args.height / BALL_SIZE) * i as f64;
                 let strip = rectangle::square(center_x, strip_y, BALL_SIZE);
-                rectangle(GRAY, strip, c.transform, gl);
+                rectangle(GRAY, strip, c.transform, g);
             }
-            rectangle(WHITE, ball, c.transform, gl);
-            // Draw the score 
-            let text_image = Image::new_color(WHITE);
+            rectangle(WHITE, ball, c.transform, g);
+            // Draw the score
+            let transform = c.transform.trans(10.0, 100.0);
+              text::Text::new_color(WHITE, 32).draw(
+                &_left_score,
+                glyphs,
+                &c.draw_state,
+                transform, g
+            ).unwrap();
+            //let text_image = Image::new_color(WHITE);
+           // text_image.build
 
         });
+    }
+
+    fn run(&mut self) {
+        // Load font
+        let assets = find_folder::Search::ParentsThenKids(3, 3)
+            .for_folder("assets").unwrap();
+        let ref font = assets.join("Square.ttf");
+        let factory = self.window.factory.clone();
+        let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
+        let mut events = Events::new(EventSettings::new());
+        while let Some(e) = events.next(&mut self.window) {
+            if let Some(r) = e.render_args() {
+                self.render(&r,&mut glyphs, &e);
+            }
+
+            if let Some(u) = e.update_args() {
+                self.update(&u);
+            }
+        }
     }
 
     fn update(&mut self, args: &UpdateArgs) {
@@ -83,31 +99,20 @@ impl App {
 }
 
 fn main() {
-    // Change this to OpenGL::V2_1 if not working.
-    let opengl = OpenGL::V3_2;
-
-    // Create an Glutin window.
-    let mut window: Window = WindowSettings::new(
+    // Create an Piston window.
+    let mut window: PistonWindow = WindowSettings::new(
             "pong",
             [1920, 1080]
         )
         .fullscreen(true)
-        .opengl(opengl)
         .exit_on_esc(true)
         .build()
         .unwrap();
+    window.set_lazy(true);
+
 
     // Create a new game and run it.
-    let mut app = App::new(GlGraphics::new(opengl));
+    let mut app = App::new(window);
 
-    let mut events = Events::new(EventSettings::new());
-    while let Some(e) = events.next(&mut window) {
-        if let Some(r) = e.render_args() {
-            app.render(&r);
-        }
-
-        if let Some(u) = e.update_args() {
-            app.update(&u);
-        }
-    }
+    app.run();
 }
