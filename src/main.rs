@@ -1,9 +1,9 @@
 extern crate find_folder;
 extern crate piston_window;
-//extern crate rand;
+extern crate rand;
 
 use piston_window::*;
-//use rand::Rng;
+use rand::Rng;
 
 pub struct App {
     window: PistonWindow, // OpenGL drawing backend.
@@ -11,10 +11,12 @@ pub struct App {
     ball_y: f64,
     current_width: f64,
     current_height: f64,
-    left_paddle: f64,
-    right_paddle: f64,
+    left_paddle_top: f64,
+    right_paddle_top: f64,
     x_velocity: f64,
     y_velocity: f64,
+    left_paddle: [f64; 4],
+    right_paddle: [f64; 4],
     score: [u32; 2],
 }
 
@@ -26,10 +28,12 @@ impl App {
             ball_y: 0.0,
             current_width: 0.0,
             current_height: 0.0,
-            left_paddle: 40.0,
-            right_paddle: 40.0,
-            x_velocity: 10.0,
-            y_velocity: 10.0,
+            left_paddle_top: 40.0,
+            right_paddle_top: 40.0,
+            left_paddle: [0.0, 0.0, 0.0, 0.0],
+            right_paddle: [0.0, 0.0, 0.0, 0.0],
+            x_velocity: 8.0,
+            y_velocity: 8.0,
             score: [0, 0],
         }
     }
@@ -47,18 +51,20 @@ impl App {
         let (paddle_width, paddle_height) = (_args.width / 50.0, _args.height / 10.0);
         let left_paddle_pos = _args.width / 20.0;
         let right_paddle_pos = left_paddle_pos * 19.0;
-        let left_paddle = rectangle::rectangle_by_corners(
+        self.left_paddle = rectangle::rectangle_by_corners(
             left_paddle_pos,
-            self.left_paddle,
+            self.left_paddle_top,
             left_paddle_pos + paddle_width,
-            self.left_paddle + paddle_height,
+            self.left_paddle_top + paddle_height,
         );
-        let right_paddle = rectangle::rectangle_by_corners(
+        let left_paddle = self.left_paddle;
+        self.right_paddle = rectangle::rectangle_by_corners(
             right_paddle_pos,
-            self.right_paddle,
+            self.right_paddle_top,
             right_paddle_pos + paddle_width,
-            self.left_paddle + paddle_height,
+            self.left_paddle_top + paddle_height,
         );
+        let right_paddle = self.right_paddle;
 
         let mut _left_score = self.score[0].to_string();
         let mut _right_score = self.score[1].to_string();
@@ -86,21 +92,26 @@ impl App {
             text::Text::new_color(WHITE, FONTSIZE)
                 .draw(&_right_score, glyphs, &c.draw_state, right_score_pos, g)
                 .unwrap();
-            //let text_image = Image::new_color(WHITE);
-            // text_image.build
         });
     }
 
-//    fn reset_ball(&mut.self, bool::right) {
-//;        self.ball_x=0,self.ball_y=0;
-//    }
+    fn reset_ball(&mut self, right: bool) {
+        let mut rng = rand::thread_rng();
+        if right {
+            self.ball_x = self.current_width;
+        } else {
+            self.ball_x = 0.0;
+        }
+        self.y_velocity = rng.gen_range(-8.0, 8.0);
+        if self.current_height > 0.0 {
+            self.ball_y = rng.gen_range(0.0, self.current_height);
+        }
+    }
 
- //   fn reset_game() {
-  //      self.left_score=0;
-   //     self.right_score=0;
- //       self.reset_ball(false);
-        
-//    }
+    fn reset_game(&mut self) {
+        self.score = [0, 0];
+        self.reset_ball(false);
+    }
 
     fn run(&mut self) {
         // Load font
@@ -111,7 +122,7 @@ impl App {
         let factory = self.window.factory.clone();
         let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
         let mut events = Events::new(EventSettings::new());
-//        self.reset_game();
+        self.reset_game();
         while let Some(e) = events.next(&mut self.window) {
             if let Some(r) = e.render_args() {
                 self.render(&r, &mut glyphs, &e);
@@ -123,26 +134,49 @@ impl App {
         }
     }
 
+    fn hit_paddle(&mut self) {}
+
     fn update(&mut self, _args: &UpdateArgs) {
         // move ball
         self.ball_x = self.ball_x + self.x_velocity;
         self.ball_y = self.ball_y + self.y_velocity;
+        // Point for left side
         if self.current_width > 0.0 && self.ball_x > self.current_width {
             self.score[0] = self.score[0] + 1;
-            self.x_velocity=0.0-self.x_velocity;
+            if self.score[0] > 14 {
+                self.reset_game();
+                return;
+            }
+            self.x_velocity = 0.0 - self.x_velocity;
+            self.reset_ball(true);
+            return;
         }
-        if self.ball_x < 0.0 {
+        // Point for right side;
+        else if self.ball_x < 0.0 {
             self.score[1] = self.score[1] + 1;
-            self.x_velocity=0.0-self.x_velocity;
+            if self.score[1] > 14 {
+                self.reset_game();
+                return;
+            }
+            self.x_velocity = 0.0 - self.x_velocity;
+            self.reset_ball(false);
+            return;
         }
         if self.ball_y < 0.0 {
-            self.y_velocity=0.0-self.y_velocity;
+            self.y_velocity = 0.0 - self.y_velocity;
         }
         if self.current_height > 0.0 && self.ball_y > self.current_height {
-            self.y_velocity=0.0-self.y_velocity;
+            self.y_velocity = 0.0 - self.y_velocity;
+        }
+        println!("{:?}", self.left_paddle);
+        if self.x_velocity > 0.0
+            && (self.ball_x < self.left_paddle[2])
+            && (self.ball_y < self.left_paddle[0])
+            && (self.ball_y > self.left_paddle[3])
+        {
+            println!("OMG left HIT");
         }
     }
-
 }
 
 fn main() {

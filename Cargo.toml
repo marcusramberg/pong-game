@@ -13,6 +13,7 @@ piston = "0.40.0"
 piston2d-opengl_graphics = "0.58.0"
 pistoncore-glutin_window = "0.52.0"
 piston_window = "*"
+rand = "*"
 
 [dependencies.piston2d-graphics]
 version = "0.29.0"
