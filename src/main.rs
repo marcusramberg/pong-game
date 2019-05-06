@@ -5,12 +5,19 @@ extern crate rand;
 use piston_window::*;
 use rand::Rng;
 
-pub struct App {
+// Constants
+const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const GRAY: [f32; 4] = [0.6, 0.6, 0.6, 1.0];
+const FONTSIZE: u32 = 48;
+const BALL_SIZE: f64 = 20.0;
+const HEIGHT: f64 = 1080.0;
+const WIDTH: f64 = 1920.0;
+
+pub struct Pong {
     window: PistonWindow, // OpenGL drawing backend.
     ball_x: f64,
     ball_y: f64,
-    current_width: f64,
-    current_height: f64,
     left_paddle_top: f64,
     right_paddle_top: f64,
     x_velocity: f64,
@@ -20,14 +27,12 @@ pub struct App {
     score: [u32; 2],
 }
 
-impl App {
-    fn new(window: PistonWindow) -> App {
-        App {
+impl Pong {
+    fn new(window: PistonWindow) -> Pong {
+        Pong {
             window: window,
             ball_x: 0.0,
             ball_y: 0.0,
-            current_width: 0.0,
-            current_height: 0.0,
             left_paddle_top: 40.0,
             right_paddle_top: 40.0,
             left_paddle: [0.0, 0.0, 0.0, 0.0],
@@ -39,12 +44,6 @@ impl App {
     }
 
     fn render(&mut self, _args: &RenderArgs, glyphs: &mut Glyphs, event: &piston_window::Event) {
-        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-        const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        const GRAY: [f32; 4] = [0.6, 0.6, 0.6, 1.0];
-        const FONTSIZE: u32 = 48;
-
-        const BALL_SIZE: f64 = 20.0;
 
         let center_x = _args.width / 2.0;
         let ball = rectangle::square(self.ball_x, self.ball_y, BALL_SIZE);
@@ -68,8 +67,6 @@ impl App {
 
         let mut _left_score = self.score[0].to_string();
         let mut _right_score = self.score[1].to_string();
-        self.current_height = _args.height;
-        self.current_width = _args.width;
 
         self.window.draw_2d(event, |c, g| {
             // Clear the screen.
@@ -98,14 +95,12 @@ impl App {
     fn reset_ball(&mut self, right: bool) {
         let mut rng = rand::thread_rng();
         if right {
-            self.ball_x = self.current_width;
+            self.ball_x = WIDTH;
         } else {
             self.ball_x = 0.0;
         }
         self.y_velocity = rng.gen_range(-8.0, 8.0);
-        if self.current_height > 0.0 {
-            self.ball_y = rng.gen_range(0.0, self.current_height);
-        }
+         self.ball_y = rng.gen_range(0.0, HEIGHT);
     }
 
     fn reset_game(&mut self) {
@@ -134,14 +129,15 @@ impl App {
         }
     }
 
-    fn hit_paddle(&mut self) {}
+    fn hit_paddle(&mut self) {
+    }
 
     fn update(&mut self, _args: &UpdateArgs) {
         // move ball
         self.ball_x = self.ball_x + self.x_velocity;
         self.ball_y = self.ball_y + self.y_velocity;
         // Point for left side
-        if self.current_width > 0.0 && self.ball_x > self.current_width {
+        if self.ball_x > WIDTH {
             self.score[0] = self.score[0] + 1;
             if self.score[0] > 14 {
                 self.reset_game();
@@ -165,7 +161,7 @@ impl App {
         if self.ball_y < 0.0 {
             self.y_velocity = 0.0 - self.y_velocity;
         }
-        if self.current_height > 0.0 && self.ball_y > self.current_height {
+        if self.ball_y > HEIGHT {
             self.y_velocity = 0.0 - self.y_velocity;
         }
         println!("{:?}", self.left_paddle);
@@ -181,7 +177,7 @@ impl App {
 
 fn main() {
     // Create an Piston window.
-    let mut window: PistonWindow = WindowSettings::new("pong", [1920, 1080])
+    let mut window: PistonWindow = WindowSettings::new("pong", [HEIGHT, WIDTH])
         .fullscreen(true)
         .exit_on_esc(true)
         .build()
@@ -189,7 +185,6 @@ fn main() {
     window.set_lazy(true);
 
     // Create a new game and run it.
-    let mut app = App::new(window);
-
-    app.run();
+    let mut pong= Pong::new(window);
+    pong.run();
 }
