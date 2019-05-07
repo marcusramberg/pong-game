@@ -6,20 +6,28 @@ use piston_window::*;
 use rand::Rng;
 
 // Constants
+const HEIGHT: f64 = 1080.0;
+const WIDTH: f64 = 1920.0;
+
 const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const GRAY: [f32; 4] = [0.6, 0.6, 0.6, 1.0];
+
 const FONTSIZE: u32 = 48;
+const CENTER: f64 = (WIDTH / 2.0);
 const BALL_SIZE: f64 = 20.0;
-const HEIGHT: f64 = 1080.0;
-const WIDTH: f64 = 1920.0;
+const PADDLE_WIDTH: f64 = (WIDTH / 50.0);
+const PADDLE_HEIGHT: f64 = (HEIGHT / 10.0);
+const LEFT_PADDLE_POS: f64 = (WIDTH / 20.0);
+const RIGHT_PADDLE_POS: f64 = (LEFT_PADDLE_POS * 19.0);
+const CELL_COUNT: f64 = 10.0;
+const WINNING_SCORE: u32 = 14;
 
 pub struct Pong {
     window: PistonWindow, // OpenGL drawing backend.
     ball_x: f64,
     ball_y: f64,
-    left_paddle_top: f64,
-    right_paddle_top: f64,
+    paddle_top: [f64; 2],
     x_velocity: f64,
     y_velocity: f64,
     left_paddle: [f64; 4],
@@ -33,8 +41,7 @@ impl Pong {
             window: window,
             ball_x: 0.0,
             ball_y: 0.0,
-            left_paddle_top: 40.0,
-            right_paddle_top: 40.0,
+            paddle_top: [40.0, 40.0],
             left_paddle: [0.0, 0.0, 0.0, 0.0],
             right_paddle: [0.0, 0.0, 0.0, 0.0],
             x_velocity: 8.0,
@@ -43,49 +50,57 @@ impl Pong {
         }
     }
 
-    fn render(&mut self, _args: &RenderArgs, glyphs: &mut Glyphs, event: &piston_window::Event) {
+    fn hit_paddle(&mut self) -> bool {
+        let center_x = self.ball_x + BALL_SIZE / 2.0;
+        let center_y = self.ball_y + BALL_SIZE / 2.0;
+        if self.x_velocity < 0.0 && hit_rect(self.left_paddle, center_x, center_y) {
+            self.y_velocity = self.y_velocity + gen_y_offset(self.left_paddle,center_y);
+            return true;
+        } else if self.x_velocity > 0.0 && hit_rect(self.right_paddle, center_x, center_y) {
+            self.y_velocity = self.y_velocity + gen_y_offset(self.right_paddle,center_y);
+            return true;
+        }
+        false
+    }
 
-        let center_x = _args.width / 2.0;
+    fn render(&mut self, _args: &RenderArgs, glyphs: &mut Glyphs, event: &piston_window::Event) {
         let ball = rectangle::square(self.ball_x, self.ball_y, BALL_SIZE);
-        let (paddle_width, paddle_height) = (_args.width / 50.0, _args.height / 10.0);
-        let left_paddle_pos = _args.width / 20.0;
-        let right_paddle_pos = left_paddle_pos * 19.0;
         self.left_paddle = rectangle::rectangle_by_corners(
-            left_paddle_pos,
-            self.left_paddle_top,
-            left_paddle_pos + paddle_width,
-            self.left_paddle_top + paddle_height,
+            LEFT_PADDLE_POS,
+            self.paddle_top[0],
+            LEFT_PADDLE_POS + PADDLE_WIDTH,
+            self.paddle_top[0] + PADDLE_HEIGHT,
         );
         let left_paddle = self.left_paddle;
         self.right_paddle = rectangle::rectangle_by_corners(
-            right_paddle_pos,
-            self.right_paddle_top,
-            right_paddle_pos + paddle_width,
-            self.left_paddle_top + paddle_height,
+            RIGHT_PADDLE_POS,
+            self.paddle_top[1],
+            RIGHT_PADDLE_POS + PADDLE_WIDTH,
+            self.paddle_top[1] + PADDLE_HEIGHT,
         );
         let right_paddle = self.right_paddle;
 
-        let mut _left_score = self.score[0].to_string();
-        let mut _right_score = self.score[1].to_string();
+        let _left_score = self.score[0].to_string();
+        let _right_score = self.score[1].to_string();
 
         self.window.draw_2d(event, |c, g| {
-            // Clear the screen.
             clear(BLACK, g);
 
+            // dots
             for i in 1..20 {
-                let strip_y = (_args.height / BALL_SIZE) * i as f64;
-                let strip = rectangle::square(center_x, strip_y, BALL_SIZE);
+                let strip_y = (HEIGHT / BALL_SIZE) * i as f64;
+                let strip = rectangle::square(CENTER, strip_y, BALL_SIZE);
                 rectangle(GRAY, strip, c.transform, g);
             }
             rectangle(WHITE, ball, c.transform, g);
             rectangle(WHITE, left_paddle, c.transform, g);
             rectangle(WHITE, right_paddle, c.transform, g);
             // Draw the score
-            let left_score_pos = c.transform.trans((_args.width / 10.0) * 4.0, 100.0);
+            let left_score_pos = c.transform.trans(cell_pos(4.0), 100.0);
             text::Text::new_color(WHITE, FONTSIZE)
                 .draw(&_left_score, glyphs, &c.draw_state, left_score_pos, g)
                 .unwrap();
-            let right_score_pos = c.transform.trans((_args.width / 10.0) * 6.0, 100.0);
+            let right_score_pos = c.transform.trans(cell_pos(6.0), 100.0);
             text::Text::new_color(WHITE, FONTSIZE)
                 .draw(&_right_score, glyphs, &c.draw_state, right_score_pos, g)
                 .unwrap();
@@ -94,13 +109,9 @@ impl Pong {
 
     fn reset_ball(&mut self, right: bool) {
         let mut rng = rand::thread_rng();
-        if right {
-            self.ball_x = WIDTH;
-        } else {
-            self.ball_x = 0.0;
-        }
+        self.ball_x = if right { WIDTH } else { 0.0 };
         self.y_velocity = rng.gen_range(-8.0, 8.0);
-         self.ball_y = rng.gen_range(0.0, HEIGHT);
+        self.ball_y = rng.gen_range(0.0, HEIGHT);
     }
 
     fn reset_game(&mut self) {
@@ -126,10 +137,10 @@ impl Pong {
             if let Some(u) = e.update_args() {
                 self.update(&u);
             }
+            if let Some(Button::Keyboard(key)) = e.press_args() {
+                self.update_input(key);
+            }
         }
-    }
-
-    fn hit_paddle(&mut self) {
     }
 
     fn update(&mut self, _args: &UpdateArgs) {
@@ -139,7 +150,7 @@ impl Pong {
         // Point for left side
         if self.ball_x > WIDTH {
             self.score[0] = self.score[0] + 1;
-            if self.score[0] > 14 {
+            if self.score[0] > WINNING_SCORE {
                 self.reset_game();
                 return;
             }
@@ -148,9 +159,9 @@ impl Pong {
             return;
         }
         // Point for right side;
-        else if self.ball_x < 0.0 {
+        else if self.ball_x < 0.0 && self.x_velocity < 0.0 {
             self.score[1] = self.score[1] + 1;
-            if self.score[1] > 14 {
+            if self.score[1] > WINNING_SCORE {
                 self.reset_game();
                 return;
             }
@@ -164,15 +175,37 @@ impl Pong {
         if self.ball_y > HEIGHT {
             self.y_velocity = 0.0 - self.y_velocity;
         }
-        println!("{:?}", self.left_paddle);
-        if self.x_velocity > 0.0
-            && (self.ball_x < self.left_paddle[2])
-            && (self.ball_y < self.left_paddle[0])
-            && (self.ball_y > self.left_paddle[3])
-        {
-            println!("OMG left HIT");
+        if self.hit_paddle() {
+            self.x_velocity = 0.0 - self.x_velocity;
         }
     }
+
+    fn update_input(&mut self, _key: Key) {
+        if _key == Key::W {
+            self.paddle_top[0] -= 45.0
+        } else if _key == Key::S {
+            self.paddle_top[0] += 45.0
+        } else if _key == Key::I {
+            self.paddle_top[1] -= 45.0
+        } else if _key == Key::K {
+            self.paddle_top[1] += 45.0
+        }
+    }
+}
+
+fn cell_pos(_pos: f64) -> f64 {
+    (WIDTH / CELL_COUNT) * _pos
+}
+
+pub fn hit_rect(_rect: [f64; 4], _x: f64, _y: f64) -> bool {
+    if _x >= _rect[0] && _x <= _rect[0] + _rect[2] && _y >= _rect[1] && _y <= _rect[1] + _rect[3] {
+        return true;
+    }
+    false
+}
+
+pub fn gen_y_offset(_rect: [f64; 4], _y: f64) -> f64 {
+    (((_y - _rect[1]) / _rect[3])*2.0)-1.0
 }
 
 fn main() {
@@ -185,6 +218,29 @@ fn main() {
     window.set_lazy(true);
 
     // Create a new game and run it.
-    let mut pong= Pong::new(window);
+    let mut pong = Pong::new(window);
     pong.run();
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::hit_rect;
+    #[test]
+    fn test_hit_rect() {
+        assert!(hit_rect([10.0, 10.0, 10.0, 10.0], 15.0, 15.0));
+    }
+    #[test]
+    fn test_miss_rect() {
+        assert!(!hit_rect([10.0, 10.0, 10.0, 10.0], 25.0, 25.0));
+    }
+    use crate::gen_y_offset;
+    #[test]
+    fn test_no_offset() {
+        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 15.0), 0.0);
+    }
+    #[test]
+    fn test_one_offset() {
+        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 10.0), -1.0);
+        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 20.0), 1.0);
+    }
 }
