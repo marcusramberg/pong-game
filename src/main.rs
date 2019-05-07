@@ -6,8 +6,11 @@ use piston_window::*;
 use rand::Rng;
 
 // Constants
-const HEIGHT: f64 = 1080.0;
-const WIDTH: f64 = 1920.0;
+const HEIGHT: f64 = 768.0;
+const WIDTH: f64 = 1366.0;
+//const HEIGHT: f64 = 1080.0;
+//const WIDTH: f64 = 1920.0;
+
 
 const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -33,6 +36,7 @@ pub struct Pong {
     left_paddle: [f64; 4],
     right_paddle: [f64; 4],
     score: [u32; 2],
+    down_keys: [bool; 4],
 }
 
 impl Pong {
@@ -47,6 +51,7 @@ impl Pong {
             x_velocity: 8.0,
             y_velocity: 8.0,
             score: [0, 0],
+            down_keys: [false, false, false, false],
         }
     }
 
@@ -64,20 +69,20 @@ impl Pong {
     }
 
     fn render(&mut self, _args: &RenderArgs, glyphs: &mut Glyphs, event: &piston_window::Event) {
-        let ball = rectangle::square(self.ball_x, self.ball_y, BALL_SIZE);
-        self.left_paddle = rectangle::rectangle_by_corners(
+        let ball = rectangle::centered_square(self.ball_x, self.ball_y, BALL_SIZE/2.0);
+        self.left_paddle = rectangle::centered([
             LEFT_PADDLE_POS,
             self.paddle_top[0],
-            LEFT_PADDLE_POS + PADDLE_WIDTH,
-            self.paddle_top[0] + PADDLE_HEIGHT,
-        );
+            PADDLE_WIDTH/2.0,
+            PADDLE_HEIGHT/2.0,
+            ]);
         let left_paddle = self.left_paddle;
-        self.right_paddle = rectangle::rectangle_by_corners(
+        self.right_paddle = rectangle::centered([
             RIGHT_PADDLE_POS,
             self.paddle_top[1],
-            RIGHT_PADDLE_POS + PADDLE_WIDTH,
-            self.paddle_top[1] + PADDLE_HEIGHT,
-        );
+            PADDLE_WIDTH/2.0,
+            PADDLE_HEIGHT/2.0,
+        ]);
         let right_paddle = self.right_paddle;
 
         let _left_score = self.score[0].to_string();
@@ -89,7 +94,7 @@ impl Pong {
             // dots
             for i in 1..20 {
                 let strip_y = (HEIGHT / BALL_SIZE) * i as f64;
-                let strip = rectangle::square(CENTER, strip_y, BALL_SIZE);
+                let strip = rectangle::centered_square(CENTER, strip_y, BALL_SIZE/2.0);
                 rectangle(GRAY, strip, c.transform, g);
             }
             rectangle(WHITE, ball, c.transform, g);
@@ -129,6 +134,7 @@ impl Pong {
         let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
         let mut events = Events::new(EventSettings::new());
         self.reset_game();
+
         while let Some(e) = events.next(&mut self.window) {
             if let Some(r) = e.render_args() {
                 self.render(&r, &mut glyphs, &e);
