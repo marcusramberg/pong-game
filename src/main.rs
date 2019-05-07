@@ -205,7 +205,7 @@ pub fn hit_rect(_rect: [f64; 4], _x: f64, _y: f64) -> bool {
 }
 
 pub fn gen_y_offset(_rect: [f64; 4], _y: f64) -> f64 {
-    (((_y - _rect[1]) / _rect[3])*2.0)-1.0
+    (((_y - _rect[1]) / _rect[3])*4.0)-1.0
 }
 
 fn main() {
@@ -233,6 +233,8 @@ mod tests {
     fn test_miss_rect() {
         assert!(!hit_rect([10.0, 10.0, 10.0, 10.0], 25.0, 25.0));
     }
+
+    // Test y acceleration offset generation.
     use crate::gen_y_offset;
     #[test]
     fn test_no_offset() {
@@ -240,7 +242,7 @@ mod tests {
     }
     #[test]
     fn test_one_offset() {
-        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 10.0), -1.0);
-        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 20.0), 1.0);
+        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 10.0), -2.0);
+        assert_eq!(gen_y_offset([10.0, 10.0, 10.0, 10.0], 20.0), 2.0);
     }
 }
