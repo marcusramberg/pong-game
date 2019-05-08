@@ -11,47 +11,47 @@ const WIDTH: f64 = 1366.0;
 //const HEIGHT: f64 = 1080.0;
 //const WIDTH: f64 = 1920.0;
 
-
 const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const GRAY: [f32; 4] = [0.6, 0.6, 0.6, 1.0];
+const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
-const FONTSIZE: u32 = 48;
-const CENTER: f64 = (WIDTH / 2.0);
 const BALL_SIZE: f64 = 20.0;
-const PADDLE_WIDTH: f64 = (WIDTH / 50.0);
-const PADDLE_HEIGHT: f64 = (HEIGHT / 10.0);
-const LEFT_PADDLE_POS: f64 = (WIDTH / 20.0);
-const RIGHT_PADDLE_POS: f64 = (LEFT_PADDLE_POS * 19.0);
 const CELL_COUNT: f64 = 10.0;
+const CENTER: f64 = (WIDTH / 2.0);
+const FONTSIZE: u32 = 48;
+const LEFT_PADDLE_POS: f64 = (WIDTH / 20.0);
+const PADDLE_HEIGHT: f64 = (HEIGHT / 10.0);
+const PADDLE_VELOCITY: f64 = 8.0;
+const PADDLE_WIDTH: f64 = (WIDTH / 50.0);
+const RIGHT_PADDLE_POS: f64 = (LEFT_PADDLE_POS * 19.0);
 const WINNING_SCORE: u32 = 14;
 
 pub struct Pong {
-    window: PistonWindow, // OpenGL drawing backend.
     ball_x: f64,
     ball_y: f64,
-    paddle_top: [f64; 2],
-    x_velocity: f64,
-    y_velocity: f64,
     left_paddle: [f64; 4],
+    paddle_top: [f64; 2],
+    pressed_keys: [bool; 4],
     right_paddle: [f64; 4],
     score: [u32; 2],
-    down_keys: [bool; 4],
+    window: PistonWindow, // OpenGL drawing backend.
+    x_velocity: f64,
+    y_velocity: f64,
 }
 
 impl Pong {
     fn new(window: PistonWindow) -> Pong {
         Pong {
-            window: window,
             ball_x: 0.0,
             ball_y: 0.0,
-            paddle_top: [40.0, 40.0],
             left_paddle: [0.0, 0.0, 0.0, 0.0],
+            paddle_top: [40.0, 40.0],
+            pressed_keys: [false, false, false, false],
             right_paddle: [0.0, 0.0, 0.0, 0.0],
+            score: [0, 0],
+            window: window,
             x_velocity: 8.0,
             y_velocity: 8.0,
-            score: [0, 0],
-            down_keys: [false, false, false, false],
         }
     }
 
@@ -59,29 +59,29 @@ impl Pong {
         let center_x = self.ball_x + BALL_SIZE / 2.0;
         let center_y = self.ball_y + BALL_SIZE / 2.0;
         if self.x_velocity < 0.0 && hit_rect(self.left_paddle, center_x, center_y) {
-            self.y_velocity = self.y_velocity + gen_y_offset(self.left_paddle,center_y);
+            self.y_velocity = self.y_velocity + gen_y_offset(self.left_paddle, center_y);
             return true;
         } else if self.x_velocity > 0.0 && hit_rect(self.right_paddle, center_x, center_y) {
-            self.y_velocity = self.y_velocity + gen_y_offset(self.right_paddle,center_y);
+            self.y_velocity = self.y_velocity + gen_y_offset(self.right_paddle, center_y);
             return true;
         }
         false
     }
 
     fn render(&mut self, _args: &RenderArgs, glyphs: &mut Glyphs, event: &piston_window::Event) {
-        let ball = rectangle::centered_square(self.ball_x, self.ball_y, BALL_SIZE/2.0);
+        let ball = rectangle::centered_square(self.ball_x, self.ball_y, BALL_SIZE / 2.0);
         self.left_paddle = rectangle::centered([
             LEFT_PADDLE_POS,
             self.paddle_top[0],
-            PADDLE_WIDTH/2.0,
-            PADDLE_HEIGHT/2.0,
-            ]);
+            PADDLE_WIDTH / 2.0,
+            PADDLE_HEIGHT / 2.0,
+        ]);
         let left_paddle = self.left_paddle;
         self.right_paddle = rectangle::centered([
             RIGHT_PADDLE_POS,
             self.paddle_top[1],
-            PADDLE_WIDTH/2.0,
-            PADDLE_HEIGHT/2.0,
+            PADDLE_WIDTH / 2.0,
+            PADDLE_HEIGHT / 2.0,
         ]);
         let right_paddle = self.right_paddle;
 
@@ -94,7 +94,7 @@ impl Pong {
             // dots
             for i in 1..20 {
                 let strip_y = (HEIGHT / BALL_SIZE) * i as f64;
-                let strip = rectangle::centered_square(CENTER, strip_y, BALL_SIZE/2.0);
+                let strip = rectangle::centered_square(CENTER, strip_y, BALL_SIZE / 2.0);
                 rectangle(GRAY, strip, c.transform, g);
             }
             rectangle(WHITE, ball, c.transform, g);
@@ -139,20 +139,42 @@ impl Pong {
             if let Some(r) = e.render_args() {
                 self.render(&r, &mut glyphs, &e);
             }
-
             if let Some(u) = e.update_args() {
                 self.update(&u);
             }
             if let Some(Button::Keyboard(key)) = e.press_args() {
-                self.update_input(key);
+                self.set_pressed(key);
+            }
+            if let Some(Button::Keyboard(key)) = e.release_args() {
+                self.set_released(key);
             }
         }
+    }
+
+    fn set_released(&mut self, _key: Key) {
+        match _key {
+            Key::W => self.pressed_keys[0] = false,
+            Key::S => self.pressed_keys[1] = false,
+            Key::I => self.pressed_keys[2] = false,
+            Key::K => self.pressed_keys[3] = false,
+            _ => {}
+        };
+    }
+    fn set_pressed(&mut self, _key: Key) {
+        match _key {
+            Key::W => self.pressed_keys[0] = true,
+            Key::S => self.pressed_keys[1] = true,
+            Key::I => self.pressed_keys[2] = true,
+            Key::K => self.pressed_keys[3] = true,
+            _ => {}
+        };
     }
 
     fn update(&mut self, _args: &UpdateArgs) {
         // move ball
         self.ball_x = self.ball_x + self.x_velocity;
         self.ball_y = self.ball_y + self.y_velocity;
+        //println!("{:?}", self.pressed_keys);
         // Point for left side
         if self.ball_x > WIDTH {
             self.score[0] = self.score[0] + 1;
@@ -181,20 +203,24 @@ impl Pong {
         if self.ball_y > HEIGHT {
             self.y_velocity = 0.0 - self.y_velocity;
         }
+
         if self.hit_paddle() {
             self.x_velocity = 0.0 - self.x_velocity;
         }
+        self.update_paddles();
     }
-
-    fn update_input(&mut self, _key: Key) {
-        if _key == Key::W {
-            self.paddle_top[0] -= 45.0
-        } else if _key == Key::S {
-            self.paddle_top[0] += 45.0
-        } else if _key == Key::I {
-            self.paddle_top[1] -= 45.0
-        } else if _key == Key::K {
-            self.paddle_top[1] += 45.0
+    fn update_paddles(&mut self) {
+        if self.pressed_keys[0] && self.paddle_top[0] > 0.0 {
+            self.paddle_top[0] -= PADDLE_VELOCITY
+        }
+        if self.pressed_keys[1] && self.paddle_top[0] < HEIGHT {
+            self.paddle_top[0] += PADDLE_VELOCITY
+        }
+        if self.pressed_keys[2] && self.paddle_top[1] > 0.0 {
+            self.paddle_top[1] -= PADDLE_VELOCITY
+        }
+        if self.pressed_keys[3] && self.paddle_top[1] < HEIGHT {
+            self.paddle_top[1] += PADDLE_VELOCITY
         }
     }
 }
@@ -211,7 +237,7 @@ pub fn hit_rect(_rect: [f64; 4], _x: f64, _y: f64) -> bool {
 }
 
 pub fn gen_y_offset(_rect: [f64; 4], _y: f64) -> f64 {
-    (((_y - _rect[1]) / _rect[3])*4.0)-1.0
+    (((_y - _rect[1]) / _rect[3]) * 4.0) - 1.0
 }
 
 fn main() {
