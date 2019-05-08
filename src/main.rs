@@ -160,6 +160,7 @@ impl Pong {
             _ => {}
         };
     }
+
     fn set_pressed(&mut self, _key: Key) {
         match _key {
             Key::W => self.pressed_keys[0] = true,
@@ -209,6 +210,7 @@ impl Pong {
         }
         self.update_paddles();
     }
+
     fn update_paddles(&mut self) {
         if self.pressed_keys[0] && self.paddle_top[0] > 0.0 {
             self.paddle_top[0] -= PADDLE_VELOCITY
@@ -229,15 +231,15 @@ fn cell_pos(_pos: f64) -> f64 {
     (WIDTH / CELL_COUNT) * _pos
 }
 
+pub fn gen_y_offset(_rect: [f64; 4], _y: f64) -> f64 {
+    (((_y - _rect[1]) / _rect[3]) * 4.0) - 2.0
+}
+
 pub fn hit_rect(_rect: [f64; 4], _x: f64, _y: f64) -> bool {
     if _x >= _rect[0] && _x <= _rect[0] + _rect[2] && _y >= _rect[1] && _y <= _rect[1] + _rect[3] {
         return true;
     }
     false
-}
-
-pub fn gen_y_offset(_rect: [f64; 4], _y: f64) -> f64 {
-    (((_y - _rect[1]) / _rect[3]) * 4.0) - 2.0
 }
 
 fn main() {
