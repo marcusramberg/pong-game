@@ -88,7 +88,7 @@ impl Pong {
         let _left_score = self.score[0].to_string();
         let _right_score = self.score[1].to_string();
 
-        self.window.draw_2d(event, |c, g| {
+        self.window.draw_2d(event, |c, g, device| {
             clear(BLACK, g);
 
             // dots
@@ -109,6 +109,7 @@ impl Pong {
             text::Text::new_color(WHITE, FONTSIZE)
                 .draw(&_right_score, glyphs, &c.draw_state, right_score_pos, g)
                 .unwrap();
+            glyphs.factory.encoder.flush(device);
         });
     }
 
@@ -130,8 +131,7 @@ impl Pong {
             .for_folder("assets")
             .unwrap();
         let ref font = assets.join("Square.ttf");
-        let factory = self.window.factory.clone();
-        let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
+        let mut glyphs = self.window.load_font(font).unwrap();
         let mut events = Events::new(EventSettings::new());
         self.reset_game();
 
