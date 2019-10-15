@@ -18,7 +18,7 @@ const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BALL_SIZE: f64 = 20.0;
 const CELL_COUNT: f64 = 10.0;
 const CENTER: f64 = (WIDTH / 2.0);
-const FONTSIZE: u32 = 48;
+const FONT_SIZE: u32 = 48;
 const LEFT_PADDLE_POS: f64 = (WIDTH / 20.0);
 const PADDLE_HEIGHT: f64 = (HEIGHT / 10.0);
 const PADDLE_VELOCITY: f64 = 8.0;
@@ -49,7 +49,7 @@ impl Pong {
             pressed_keys: [false, false, false, false],
             right_paddle: [0.0, 0.0, 0.0, 0.0],
             score: [0, 0],
-            window: window,
+            window,
             x_velocity: 8.0,
             y_velocity: 8.0,
         }
@@ -88,29 +88,32 @@ impl Pong {
         let _left_score = self.score[0].to_string();
         let _right_score = self.score[1].to_string();
 
-        self.window.draw_2d(event, |c, g, device| {
-            clear(BLACK, g);
+        self.window.draw_2d(
+            event,
+            |c, g, device| {
+                clear(BLACK, g);
 
-            // dots
-            for i in 1..20 {
-                let strip_y = (HEIGHT / BALL_SIZE) * i as f64;
-                let strip = rectangle::centered_square(CENTER, strip_y, BALL_SIZE / 2.0);
-                rectangle(GRAY, strip, c.transform, g);
+                // dots
+                for i in 1..20 {
+                    let strip_y = (HEIGHT / BALL_SIZE) * i as f64;
+                    let strip = rectangle::centered_square(CENTER, strip_y, BALL_SIZE / 2.0);
+                    rectangle(GRAY, strip, c.transform, g);
+                }
+                rectangle(WHITE, ball, c.transform, g);
+                rectangle(WHITE, left_paddle, c.transform, g);
+                rectangle(WHITE, right_paddle, c.transform, g);
+                // Draw the score
+                let left_score_pos = c.transform.trans(cell_pos(4.0), 100.0);
+                text::Text::new_color(WHITE, FONT_SIZE)
+                    .draw(&_left_score, glyphs, &c.draw_state, left_score_pos, g)
+                    .unwrap();
+                let right_score_pos = c.transform.trans(cell_pos(6.0), 100.0);
+                text::Text::new_color(WHITE, FONT_SIZE)
+                    .draw(&_right_score, glyphs, &c.draw_state, right_score_pos, g)
+                    .unwrap();
+                glyphs.factory.encoder.flush(device);
             }
-            rectangle(WHITE, ball, c.transform, g);
-            rectangle(WHITE, left_paddle, c.transform, g);
-            rectangle(WHITE, right_paddle, c.transform, g);
-            // Draw the score
-            let left_score_pos = c.transform.trans(cell_pos(4.0), 100.0);
-            text::Text::new_color(WHITE, FONTSIZE)
-                .draw(&_left_score, glyphs, &c.draw_state, left_score_pos, g)
-                .unwrap();
-            let right_score_pos = c.transform.trans(cell_pos(6.0), 100.0);
-            text::Text::new_color(WHITE, FONTSIZE)
-                .draw(&_right_score, glyphs, &c.draw_state, right_score_pos, g)
-                .unwrap();
-            glyphs.factory.encoder.flush(device);
-        });
+        );
     }
 
     fn reset_ball(&mut self, right: bool) {
