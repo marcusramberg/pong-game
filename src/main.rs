@@ -6,8 +6,8 @@ use piston_window::*;
 use rand::Rng;
 
 // Constants
-const HEIGHT: f64 = 768.0;
-const WIDTH: f64 = 1366.0;
+const HEIGHT: f64 = 1080.0;
+const WIDTH: f64 = 1920.0;
 //const HEIGHT: f64 = 1080.0;
 //const WIDTH: f64 = 1920.0;
 
